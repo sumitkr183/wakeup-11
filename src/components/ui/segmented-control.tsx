@@ -7,7 +7,7 @@ import { AppText } from './app-text';
 type Option<T extends string> = {
   value: T;
   label: string;
-  /** Background of the selected segment. Defaults to the accent color. */
+  /** Text color of the selected segment. Defaults to the accent color. */
   activeColor?: string;
 };
 
@@ -28,12 +28,11 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
-            style={[
-              styles.segment,
-              selected && styles.selected,
-              selected && option.activeColor ? { backgroundColor: option.activeColor } : null,
-            ]}>
-            <AppText variant="label" tone={selected ? 'onAccent' : 'muted'}>
+            style={[styles.segment, selected && styles.selected]}>
+            <AppText
+              variant="label"
+              tone={selected ? 'default' : 'muted'}
+              style={selected ? { color: option.activeColor ?? colors.accent } : null}>
               {option.label}
             </AppText>
           </Pressable>
@@ -49,6 +48,8 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
     gap: spacing.xs,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   segment: {
@@ -59,6 +60,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   selected: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.surfaceRaised,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.35)',
   },
 });

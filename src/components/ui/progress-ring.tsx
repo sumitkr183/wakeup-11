@@ -8,6 +8,8 @@ type ProgressRingProps = {
   value: number;
   total: number;
   accessibilityLabel: string;
+  /** Small text under the value, e.g. "of 12". */
+  caption?: string;
   size?: number;
   strokeWidth?: number;
   color?: string;
@@ -25,7 +27,8 @@ export function ProgressRing({
   value,
   total,
   accessibilityLabel,
-  size = 104,
+  caption,
+  size = 112,
   strokeWidth = 12,
   color = colors.success,
 }: ProgressRingProps) {
@@ -72,6 +75,11 @@ export function ProgressRing({
 
       <View style={[StyleSheet.absoluteFill, styles.center]}>
         <AppText variant="title">{value}</AppText>
+        {caption ? (
+          <AppText variant="caption" tone="muted">
+            {caption}
+          </AppText>
+        ) : null}
       </View>
     </View>
   );
@@ -79,7 +87,7 @@ export function ProgressRing({
 
 const styles = StyleSheet.create({
   track: {
-    borderColor: colors.border,
+    borderColor: colors.surfaceRaised,
   },
   halfBox: {
     position: 'absolute',

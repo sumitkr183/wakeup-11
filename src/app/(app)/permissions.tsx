@@ -1,27 +1,40 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
 
+import { Appear } from '@/components/ui/appear';
 import { AppText } from '@/components/ui/app-text';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import type { IconName } from '@/components/ui/icon';
+import { IconCircle } from '@/components/ui/icon-circle';
 import { Screen } from '@/components/ui/screen';
-import { spacing } from '@/constants/theme';
+import { Section } from '@/components/ui/section';
+import { colors, spacing } from '@/constants/theme';
 import { requestAlarmPermission } from '@/features/alarm/notifications';
 import { syncAlarms } from '@/features/alarm/scheduler';
 import { alarmPermissionQueryKey, useAlarmPermission } from '@/features/alarm/use-alarm-permission';
 import { registerDeviceForPush } from '@/features/devices/device-registration';
-import { logSyncError } from '@/features/wakeups/api';
 import { TestAlarmButton } from '@/features/home/shared';
+import { logSyncError } from '@/features/wakeups/api';
 
-const PLATFORM_TIPS =
+type Tip = { icon: IconName; text: string };
+
+const PLATFORM_TIPS: readonly Tip[] =
   Platform.OS === 'ios'
     ? [
-        'In Settings › Notifications › Wakeup 11, turn on Time Sensitive Notifications so alarms break through Focus and Sleep modes.',
-        'Keep the phone charged overnight, and keep the app signed in.',
+        {
+          icon: 'bolt',
+          text: 'In Settings › Notifications › Wakeup 11, turn on Time Sensitive Notifications so alarms break through Focus and Sleep modes.',
+        },
+        { icon: 'battery', text: 'Keep the phone charged overnight, and keep the app signed in.' },
       ]
     : [
-        'Alarms play at your alarm volume, not your ringer volume, so they ring on silent. Keep the alarm volume up.',
-        'If your phone has a battery saver for apps, set Wakeup 11 to "No restrictions".',
+        {
+          icon: 'volume',
+          text: 'Alarms play at your alarm volume, not your ringer volume, so they ring on silent. Keep the alarm volume up.',
+        },
+        { icon: 'battery', text: 'If your phone has a battery saver for apps, set Wakeup 11 to "No restrictions".' },
       ];
 
 export default function PermissionsScreen() {
@@ -39,39 +52,63 @@ export default function PermissionsScreen() {
   });
 
   const isGranted = permission === 'granted';
+  const isDenied = permission === 'denied';
 
   return (
     <Screen edges={['bottom']} footer={isGranted ? <TestAlarmButton /> : null}>
-      <View style={styles.intro}>
+      <Appear index={0} style={styles.intro}>
+        <IconCircle name="alarm" size={64} />
         <AppText variant="title">Let alarms ring</AppText>
         <AppText tone="muted">
-          Wakeup 11 sets a real alarm on this phone for every team wake-up, so it rings even if the internet is
-          down in the morning.
+          Wakeup 11 sets a real alarm on this phone for every team wake-up, so it rings even if the internet is down
+          in the morning.
         </AppText>
-      </View>
+      </Appear>
 
-      <Card highlighted={!isGranted}>
-        <AppText variant="heading">Notifications and alarms</AppText>
-        <AppText variant="label" tone={isGranted ? 'success' : permission === 'denied' ? 'danger' : 'muted'}>
-          {isGranted ? 'Allowed' : permission === 'denied' ? 'Blocked in Settings' : 'Not allowed yet'}
-        </AppText>
-        {isGranted ? null : permission === 'denied' ? (
-          <Button title="Open Settings" onPress={() => void Linking.openSettings()} />
-        ) : (
-          <Button title="Allow alarms" loading={request.isPending} onPress={() => request.mutate()} />
-        )}
-      </Card>
+      <Appear index={1}>
+        <Card highlighted={!isGranted} style={styles.statusCard}>
+          <View style={styles.statusHeader}>
+            <IconCircle
+              name={isGranted ? 'shield' : 'bell'}
+              color={isGranted ? colors.success : colors.accent}
+              backgroundColor={isGranted ? colors.successSoft : colors.accentSoft}
+            />
+            <View style={styles.statusText}>
+              <AppText variant="heading">Notifications and alarms</AppText>
+              <Badge
+                label={isGranted ? 'Allowed' : isDenied ? 'Blocked in Settings' : 'Not allowed yet'}
+                tone={isGranted ? 'success' : isDenied ? 'danger' : 'neutral'}
+                icon={isGranted ? 'check' : isDenied ? 'cancel' : undefined}
+              />
+            </View>
+          </View>
+          {isGranted ? null : isDenied ? (
+            <Button title="Open Settings" icon="settings" onPress={() => void Linking.openSettings()} />
+          ) : (
+            <Button title="Allow alarms" icon="bell" loading={request.isPending} onPress={() => request.mutate()} />
+          )}
+        </Card>
+      </Appear>
 
-      <View style={styles.tips}>
-        <AppText variant="overline" tone="muted">
-          For a reliable wake-up
-        </AppText>
-        {PLATFORM_TIPS.map((tip) => (
-          <AppText key={tip} tone="muted">
-            • {tip}
-          </AppText>
-        ))}
-      </View>
+      <Appear index={2}>
+        <Section title="For a reliable wake-up">
+          <Card style={styles.tips}>
+            {PLATFORM_TIPS.map((tip) => (
+              <View key={tip.text} style={styles.tip}>
+                <IconCircle
+                  name={tip.icon}
+                  size={36}
+                  color={colors.textMuted}
+                  backgroundColor={colors.surfaceRaised}
+                />
+                <AppText tone="muted" style={styles.tipText}>
+                  {tip.text}
+                </AppText>
+              </View>
+            ))}
+          </Card>
+        </Section>
+      </Appear>
     </Screen>
   );
 }
@@ -80,7 +117,26 @@ const styles = StyleSheet.create({
   intro: {
     gap: spacing.sm,
   },
+  statusCard: {
+    gap: spacing.lg,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  statusText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
   tips: {
-    gap: spacing.sm,
+    gap: spacing.lg,
+  },
+  tip: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  tipText: {
+    flex: 1,
   },
 });

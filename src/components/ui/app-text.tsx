@@ -3,11 +3,12 @@ import { StyleSheet, Text, type TextProps } from 'react-native';
 import { colors, typography } from '@/constants/theme';
 
 type Variant = keyof typeof typography;
-type Tone = 'default' | 'muted' | 'accent' | 'success' | 'danger' | 'onAccent';
+type Tone = 'default' | 'muted' | 'subtle' | 'accent' | 'success' | 'danger' | 'onAccent';
 
 const toneColors: Record<Tone, string> = {
   default: colors.text,
   muted: colors.textMuted,
+  subtle: colors.textSubtle,
   accent: colors.accent,
   success: colors.success,
   danger: colors.danger,

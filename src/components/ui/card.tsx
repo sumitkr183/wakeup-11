@@ -1,8 +1,9 @@
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, gradients, radius, spacing } from '@/constants/theme';
 
 export type CardProps = ViewProps & {
+  /** Draws attention: accent border and a warm glow in the corner. */
   highlighted?: boolean;
 };
 
@@ -18,8 +19,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   highlighted: {
-    borderColor: colors.accent,
+    borderColor: 'rgba(255, 178, 36, 0.4)',
+    experimental_backgroundImage: gradients.heroGlow,
   },
 });

@@ -1,7 +1,8 @@
-import { Alert, Linking, Pressable, StyleSheet } from 'react-native';
+import { Alert, Linking, StyleSheet } from 'react-native';
 
-import { AppText } from '@/components/ui/app-text';
-import { colors, MIN_TOUCH_TARGET, radius, spacing } from '@/constants/theme';
+import { Icon } from '@/components/ui/icon';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { colors, MIN_TOUCH_TARGET, radius } from '@/constants/theme';
 
 type CallButtonProps = {
   name: string;
@@ -12,39 +13,33 @@ type CallButtonProps = {
 
 export function CallButton({ name, phone, variant = 'outline' }: CallButtonProps) {
   const call = () =>
-    Linking.openURL(`tel:${phone}`).catch(() =>
-      Alert.alert("Couldn't start a call", `Call ${name} on ${phone}.`),
-    );
+    Linking.openURL(`tel:${phone}`).catch(() => Alert.alert("Couldn't start a call", `Call ${name} on ${phone}.`));
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Call ${name}`}
       onPress={() => void call()}
-      style={({ pressed }) => [styles.base, styles[variant], pressed && styles.pressed]}>
-      <AppText variant="label" tone={variant === 'filled' ? 'onAccent' : 'accent'}>
-        Call
-      </AppText>
-    </Pressable>
+      pressedScale={0.9}
+      style={[styles.base, styles[variant]]}>
+      <Icon name="phone" size={20} color={variant === 'filled' ? colors.onAccent : colors.accent} />
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: MIN_TOUCH_TARGET,
-    minWidth: MIN_TOUCH_TARGET,
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.accent,
   },
-  outline: {},
+  outline: {
+    backgroundColor: colors.accentSoft,
+  },
   filled: {
     backgroundColor: colors.accent,
-  },
-  pressed: {
-    opacity: 0.7,
+    boxShadow: '0px 4px 14px rgba(255, 178, 36, 0.4)',
   },
 });

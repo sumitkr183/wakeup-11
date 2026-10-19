@@ -2,10 +2,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
+import { Appear } from '@/components/ui/appear';
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Icon } from '@/components/ui/icon';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { PulseDot } from '@/components/ui/pulse-dot';
 import { Screen } from '@/components/ui/screen';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { ErrorView, LoadingView } from '@/components/ui/status-view';
@@ -56,9 +60,7 @@ export default function WakeupStatusScreen() {
   if (!wakeup.data || wakeup.data.cancelled_at) {
     return (
       <Screen edges={['bottom']}>
-        <Card>
-          <AppText variant="heading">This wake-up was cancelled</AppText>
-        </Card>
+        <EmptyState icon="cancel" title="This wake-up was cancelled" message="Nobody’s alarm rings for it." />
       </Screen>
     );
   }
@@ -70,6 +72,7 @@ export default function WakeupStatusScreen() {
   const visible = tab === 'pending' ? pending : done;
   // Nothing to ring once everyone is up, so the footer goes away entirely.
   const showAdminActions = isAdmin && (!hasStarted || pending.length > 0);
+  const isComplete = pending.length === 0;
   const caption = getProgressCaption({
     ringAt,
     now,
@@ -87,50 +90,68 @@ export default function WakeupStatusScreen() {
           <AdminActions wakeupId={id} hasStarted={hasStarted} pendingCount={pending.length} />
         ) : null
       }>
-      <View style={styles.heading}>
+      <Appear index={0} style={styles.heading}>
         <View style={styles.liveRow}>
-          {hasStarted ? <View style={styles.liveDot} /> : null}
+          {hasStarted ? <PulseDot /> : <Icon name="clock" size={14} color={colors.accent} />}
           <AppText variant="overline" tone="accent">
             {hasStarted ? `Live · ${formatTime(now)}` : 'Upcoming'}
           </AppText>
         </View>
-        <AppText variant="heading">{formatDayAndTime(ringAt, now)} wake-up</AppText>
+        <AppText variant="title">{formatDayAndTime(ringAt, now)}</AppText>
         {wakeup.data.message ? <AppText tone="muted">{wakeup.data.message}</AppText> : null}
-      </View>
+      </Appear>
 
-      <Card style={styles.summary}>
-        <ProgressRing
-          value={done.length}
-          total={rows.length}
-          accessibilityLabel={`${done.length} of ${rows.length} ${hasStarted ? 'awake' : 'alarms set'}`}
+      <Appear index={1}>
+        <Card style={styles.summary}>
+          <ProgressRing
+            value={done.length}
+            total={rows.length}
+            caption={`of ${rows.length}`}
+            color={isComplete ? colors.success : colors.accent}
+            accessibilityLabel={`${done.length} of ${rows.length} ${hasStarted ? 'awake' : 'alarms set'}`}
+          />
+          <View style={styles.summaryText}>
+            <SummaryStat
+              color={colors.success}
+              value={done.length}
+              label={hasStarted ? 'awake' : 'alarms set'}
+            />
+            <SummaryStat
+              color={pending.length > 0 ? colors.accent : colors.textSubtle}
+              value={pending.length}
+              label={hasStarted ? 'not yet' : 'not set'}
+            />
+            <AppText variant="caption" tone="muted">
+              {caption}
+            </AppText>
+          </View>
+        </Card>
+      </Appear>
+
+      <Appear index={2} style={styles.list}>
+        <SegmentedControl
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'pending', label: `${hasStarted ? 'Not awake' : 'Not set'} · ${pending.length}` },
+            { value: 'done', label: `${hasStarted ? 'Awake' : 'Set'} · ${done.length}`, activeColor: colors.success },
+          ]}
         />
-        <View style={styles.summaryText}>
-          <AppText variant="heading" tone="success">
-            {done.length} {hasStarted ? 'awake' : 'alarms set'}
-          </AppText>
-          <AppText variant="heading" tone={pending.length > 0 ? 'accent' : 'muted'}>
-            {pending.length} {hasStarted ? 'not yet' : 'not set'}
-          </AppText>
-          <AppText variant="caption" tone="muted">
-            {caption}
-          </AppText>
-        </View>
-      </Card>
 
-      <SegmentedControl
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'pending', label: `${hasStarted ? 'Not awake' : 'Not set'} (${pending.length})` },
-          { value: 'done', label: `${hasStarted ? 'Awake' : 'Set'} (${done.length})`, activeColor: colors.success },
-        ]}
-      />
-
-      <View style={styles.list}>
         {visible.length === 0 ? (
-          <AppText tone="muted" style={styles.empty}>
-            {tab === 'pending' ? 'Everyone is covered.' : 'Nobody yet.'}
-          </AppText>
+          <EmptyState
+            icon={tab === 'pending' ? 'check' : 'moon'}
+            title={tab === 'pending' ? 'Everyone is covered' : 'Nobody yet'}
+            message={
+              tab === 'pending'
+                ? hasStarted
+                  ? 'The whole team has checked in.'
+                  : 'Every teammate has the alarm set.'
+                : hasStarted
+                  ? 'Check-ins appear here as people wake up.'
+                  : 'Teammates appear here once their alarm is set.'
+            }
+          />
         ) : (
           visible.map(({ member, state }) => {
             const isYou = member.user_id === profile.id;
@@ -144,8 +165,18 @@ export default function WakeupStatusScreen() {
             );
           })
         )}
-      </View>
+      </Appear>
     </Screen>
+  );
+}
+
+function SummaryStat({ color, value, label }: { color: string; value: number; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <View style={[styles.statDot, { backgroundColor: color }]} />
+      <AppText variant="heading">{value}</AppText>
+      <AppText tone="muted">{label}</AppText>
+    </View>
   );
 }
 
@@ -166,7 +197,14 @@ function AdminActions({ wakeupId, hasStarted, pendingCount }: AdminActionsProps)
         onSuccess: (count) => Alert.alert('Ringing again', `Sent to ${count} teammate${count === 1 ? '' : 's'}.`),
         onError: (error) => Alert.alert("Couldn't ring", getErrorMessage(error)),
       });
-    return <Button title={`Ring the ${pendingCount} again now`} loading={ringAgain.isPending} onPress={ringPending} />;
+    return (
+      <Button
+        title={`Ring the ${pendingCount} again now`}
+        icon="bell"
+        loading={ringAgain.isPending}
+        onPress={ringPending}
+      />
+    );
   }
 
   const confirmCancel = () =>
@@ -182,7 +220,15 @@ function AdminActions({ wakeupId, hasStarted, pendingCount }: AdminActionsProps)
           }),
       },
     ]);
-  return <Button title="Cancel wake-up" variant="secondary" loading={cancel.isPending} onPress={confirmCancel} />;
+  return (
+    <Button
+      title="Cancel wake-up"
+      icon="cancel"
+      variant="danger"
+      loading={cancel.isPending}
+      onPress={confirmCancel}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
@@ -194,12 +240,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
-  },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,11 +250,17 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
   },
-  list: {
+  stat: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  empty: {
-    textAlign: 'center',
-    paddingVertical: spacing.xl,
+  statDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  list: {
+    gap: spacing.sm,
   },
 });

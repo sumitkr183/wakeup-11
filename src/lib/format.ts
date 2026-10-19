@@ -28,6 +28,24 @@ export function formatDayAndTime(date: Date, now: Date = new Date()): string {
   return `${formatDay(date, now)}, ${formatTime(date)}`;
 }
 
+/** "Good morning", "Good afternoon", or "Good evening". */
+export function getGreeting(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/** "in 7 h 12 min", "in 45 min", or "in under a minute". */
+export function formatCountdown(target: Date, now: Date = new Date()): string {
+  const totalMinutes = minutesBetween(now, target);
+  if (totalMinutes < 1) return 'in under a minute';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `in ${minutes} min`;
+  return minutes === 0 ? `in ${hours} h` : `in ${hours} h ${minutes} min`;
+}
+
 export function minutesBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / MINUTE);
 }

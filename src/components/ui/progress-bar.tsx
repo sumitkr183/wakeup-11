@@ -1,18 +1,19 @@
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, radius } from '@/constants/theme';
 
 type ProgressBarProps = {
   value: number;
   total: number;
   color?: string;
+  height?: number;
 };
 
-export function ProgressBar({ value, total, color = colors.success }: ProgressBarProps) {
+export function ProgressBar({ value, total, color = colors.success, height = 8 }: ProgressBarProps) {
   const fraction = total > 0 ? Math.min(Math.max(value / total, 0), 1) : 0;
 
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, { height }]}>
       <View style={[styles.fill, { width: `${fraction * 100}%`, backgroundColor: color }]} />
     </View>
   );
@@ -20,13 +21,12 @@ export function ProgressBar({ value, total, color = colors.success }: ProgressBa
 
 const styles = StyleSheet.create({
   track: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.border,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 5,
+    borderRadius: radius.pill,
   },
 });

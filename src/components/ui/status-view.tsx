@@ -6,6 +6,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { AppText } from './app-text';
 import { Button } from './button';
 import { Card } from './card';
+import { IconCircle } from './icon-circle';
 
 export function LoadingView() {
   return (
@@ -23,11 +24,18 @@ type ErrorViewProps = {
 export function ErrorView({ error, onRetry }: ErrorViewProps) {
   return (
     <View style={styles.center}>
-      <AppText variant="heading">Couldn’t load this</AppText>
-      <AppText tone="muted" style={styles.message}>
+      <IconCircle name="warning" size={64} color={colors.danger} backgroundColor={colors.dangerSoft} />
+      <AppText variant="title" style={styles.centerText}>
+        Couldn’t load this
+      </AppText>
+      <AppText tone="muted" style={styles.centerText}>
         {getErrorMessage(error)}
       </AppText>
-      {onRetry ? <Button title="Try again" variant="secondary" onPress={onRetry} /> : null}
+      {onRetry ? (
+        <View style={styles.retry}>
+          <Button title="Try again" icon="refresh" variant="secondary" onPress={onRetry} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -41,9 +49,14 @@ export function InlineLoading() {
 export function InlineError({ error, onRetry }: ErrorViewProps) {
   return (
     <Card>
-      <AppText variant="heading">Couldn’t load this</AppText>
+      <View style={styles.inlineHeader}>
+        <IconCircle name="warning" size={36} color={colors.danger} backgroundColor={colors.dangerSoft} />
+        <AppText variant="heading" style={styles.flex}>
+          Couldn’t load this
+        </AppText>
+      </View>
       <AppText tone="muted">{getErrorMessage(error)}</AppText>
-      {onRetry ? <Button title="Try again" variant="secondary" onPress={onRetry} /> : null}
+      {onRetry ? <Button title="Try again" icon="refresh" variant="secondary" onPress={onRetry} /> : null}
     </Card>
   );
 }
@@ -51,6 +64,14 @@ export function InlineError({ error, onRetry }: ErrorViewProps) {
 const styles = StyleSheet.create({
   inlineLoading: {
     paddingVertical: spacing.xl,
+  },
+  inlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  flex: {
+    flex: 1,
   },
   center: {
     flex: 1,
@@ -60,7 +81,11 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     backgroundColor: colors.background,
   },
-  message: {
+  centerText: {
     textAlign: 'center',
+  },
+  retry: {
+    marginTop: spacing.sm,
+    alignSelf: 'stretch',
   },
 });

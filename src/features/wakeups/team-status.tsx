@@ -1,8 +1,12 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
+import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
+import { IconCircle } from '@/components/ui/icon-circle';
+import { PressableScale } from '@/components/ui/pressable-scale';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { colors, spacing } from '@/constants/theme';
 import { CallButton } from '@/features/team/call-button';
@@ -19,10 +23,17 @@ type MemberStatusRowProps = {
 
 export function MemberStatusRow({ name, state, phone }: MemberStatusRowProps) {
   return (
-    <Card style={styles.row}>
-      <Avatar name={name} />
+    <Card style={[styles.row, state.needsCall && styles.rowNeedsCall]}>
+      <View>
+        <Avatar name={name} />
+        {state.isDone ? (
+          <View style={styles.doneDot}>
+            <Icon name="check" size={14} color={colors.success} />
+          </View>
+        ) : null}
+      </View>
       <View style={styles.rowText}>
-        <AppText variant="label" numberOfLines={1} style={styles.rowName}>
+        <AppText variant="heading" numberOfLines={1}>
           {name}
         </AppText>
         <AppText variant="caption" tone={state.tone}>
@@ -32,21 +43,6 @@ export function MemberStatusRow({ name, state, phone }: MemberStatusRowProps) {
       {state.needsCall && phone ? <CallButton name={name} phone={phone} variant="filled" /> : null}
     </Card>
   );
-}
-
-function Avatar({ name }: { name: string }) {
-  return (
-    <View style={styles.avatar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <AppText variant="label">{getInitials(name)}</AppText>
-    </View>
-  );
-}
-
-function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  const letters = words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[words.length - 1][0];
-  return letters.toUpperCase();
 }
 
 /**
@@ -63,28 +59,34 @@ export function TeamStatusCard({ wakeupId, userId }: { wakeupId: string; userId?
   const rank = userId ? getWakeRank(status.data, userId) : null;
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Team status: ${awake} of ${total} awake`}
       accessibilityHint="Shows who is awake and who isn't"
-      onPress={() => router.push({ pathname: '/wakeups/[id]', params: { id: wakeupId } })}
-      style={({ pressed }) => pressed && styles.pressed}>
+      onPress={() => router.push({ pathname: '/wakeups/[id]', params: { id: wakeupId } })}>
       <Card style={styles.card}>
         <View style={styles.cardTop}>
-          <AppText variant="heading">Team status</AppText>
-          <AppText>
-            <AppText variant="label" tone="success">
-              {awake}
+          <IconCircle name="people" size={40} color={colors.success} backgroundColor={colors.successSoft} />
+          <View style={styles.cardTitle}>
+            <AppText variant="heading">Team status</AppText>
+            <AppText variant="caption" tone="muted">
+              {rank ? `You were #${rank} to wake up` : 'Tap to see who is still asleep'}
             </AppText>
-            <AppText tone="muted"> of {total} awake</AppText>
-          </AppText>
+          </View>
+          <Icon name="chevronRight" size={16} color={colors.textSubtle} />
         </View>
         <ProgressBar value={awake} total={total} />
-        <AppText variant="caption" tone="muted">
-          {rank ? `You were #${rank} to wake up. Tap to see the team.` : 'Tap to see who is still asleep.'}
+        <AppText variant="label">
+          <AppText variant="label" tone="success">
+            {awake}
+          </AppText>
+          <AppText variant="label" tone="muted">
+            {' '}
+            of {total} awake
+          </AppText>
         </AppText>
       </Card>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -95,22 +97,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
+  rowNeedsCall: {
+    borderColor: 'rgba(255, 178, 36, 0.35)',
+  },
   rowText: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xxs,
   },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceRaised,
+  doneDot: {
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    borderRadius: 10,
+    padding: 1,
+    backgroundColor: colors.surface,
   },
   card: {
     gap: spacing.md,
@@ -118,11 +119,11 @@ const styles = StyleSheet.create({
   },
   cardTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  pressed: {
-    opacity: 0.8,
+  cardTitle: {
+    flex: 1,
+    gap: spacing.xxs,
   },
 });
