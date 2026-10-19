@@ -1,56 +1,92 @@
-# Welcome to your Expo app 👋
+# Wakeup 11
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+One person schedules a wake-up and every teammate's phone rings. The app tracks who checked in, so the admin only needs to call the few people still asleep.
 
-## Get started
+Built with Expo SDK 57 (Expo Router) and Supabase.
 
-1. Install dependencies
+## How the alarm works
 
-   ```bash
-   npm install
-   ```
+1. The admin schedules a wake-up (`schedule_wakeup` RPC).
+2. Every phone syncs and **schedules local alarms** at T, T+3, T+6 and T+9 minutes (`src/features/alarm/scheduler.ts`). They ring offline too. The phone then reports "alarm set" to the server.
+3. At ring time, the member taps **I'm awake** (`mark_awake`), which cancels the remaining re-rings.
+4. A `pg_cron` job (`private.dispatch_due_rings`, every minute) sends backup pushes through the Expo Push API:
+   - from T, to phones that never confirmed an alarm;
+   - from T+12, to anyone still asleep.
+5. The admin's **Live status** screen updates through Supabase Realtime. After 10 minutes it flags who needs a phone call.
 
-2. Start the app
+| | Android | iOS |
+|---|---|---|
+| Rings on silent | Yes. The alarm channel uses the ALARM audio stream. | Only while the app is open. Notification sounds follow the ringer switch. |
+| Breaks through Do Not Disturb / Focus | Yes (`bypassDnd`) | Yes, with Time Sensitive notifications enabled |
+| Exact timing | `USE_EXACT_ALARM` | Yes |
 
-   ```bash
-   npx expo start
-   ```
+> **iOS limitation:** with the ringer switch on silent, an iPhone alarm notification vibrates but makes no sound. Fixing this needs Apple's AlarmKit (iOS 26+) through a native module. It plugs into `src/features/alarm/scheduler.ts` without changing any screens.
 
-In the output, you'll find options to open the app in a
+## Project layout
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/app/                Routes (Expo Router)
+  _layout.tsx           Providers and auth guards (Stack.Protected)
+  onboarding.tsx        Join with invite code, name and phone, or create a team
+  (app)/                Signed-in app (one app; screens depend on role)
+    index.tsx           Member home or admin home
+    permissions.tsx     Alarm permission and tips
+    ring/[id].tsx       Full-screen ringing screen
+    schedule.tsx        Admin: schedule a wake-up
+    wakeups/[id].tsx    Admin: live status
+src/features/           Feature logic (alarm engine, auth, wakeups, team, devices)
+src/components/ui/      Shared UI primitives
+supabase/migrations/    Database schema, RLS, RPCs and cron job
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Setup
 
-### Other setup steps
+### 1. Supabase
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+1. Create a project at [supabase.com](https://supabase.com).
+2. Apply the schema. Either:
+   - run `npx supabase login`, `npx supabase init`, `npx supabase link --project-ref <ref>`, then `npx supabase db push`; or
+   - paste each file in `supabase/migrations/` into the SQL Editor, oldest first, and run it.
+3. **Auth › Sign In / Providers**: turn on **Allow anonymous sign-ins** (or run `npx supabase config push`). There is no email step: each phone gets an anonymous account when it joins with an invite code, name and phone number, or creates a team.
 
-## Learn more
+> Anonymous accounts live on the phone. Uninstalling the app or clearing its data loses the account, so a member rejoins with the invite code. The admin can't leave or sign out, because there would be no way back in.
 
-To learn more about developing your project with Expo, look at the following resources:
+### 2. App config
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+cp .env.example .env.local   # then fill in the URL and publishable key
+npm install
+```
 
-## Join the community
+### 3. Push notifications and builds (EAS)
 
-Join our community of developers creating universal apps.
+Push and alarm sounds need a development build. They don't work in Expo Go.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx eas-cli@latest init                # adds the projectId the app needs for push tokens
+npx eas-cli@latest build:configure
+npx eas-cli@latest build --profile development --platform android
+npx eas-cli@latest build --profile development --platform ios
+```
+
+- **Android:** upload an FCM V1 service account key with `npx eas-cli@latest credentials`. See [the Expo FCM guide](https://docs.expo.dev/push-notifications/fcm-credentials/).
+- **iOS:** EAS creates the APNs key and enables the Time Sensitive Notifications capability during the build.
+
+Then start the dev server with `npx expo start`.
+
+## Checks
+
+```bash
+npm run typecheck
+npm run lint
+npx expo-doctor
+```
+
+## Manual test checklist
+
+- [ ] Admin creates a team, and a member joins with the invite code.
+- [ ] **Test my alarm** with the phone locked and on silent. Android rings; iPhone banner appears.
+- [ ] Schedule a wake-up 3 minutes out. The admin's Live status shows "alarm set" for each phone.
+- [ ] The alarm rings. **I'm awake** stops the re-rings and the admin sees the check-in live.
+- [ ] Don't check in on one phone: it re-rings at +3/+6/+9 and gets server pushes from +12.
+- [ ] Cancel an upcoming wake-up: members get a notification and the local alarm is removed.
